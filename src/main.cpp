@@ -16,38 +16,65 @@ void handleRoot() {
 }
 
 void postHandler() {
-  String message;
-  if (server.hasArg("plain")) {
-    message = server.arg("plain");
-    if(message == "on") {
-      digitalWrite(led, HIGH);
-    } else if(message == "off") {
-      digitalWrite(led, LOW);
-    }
-  } else {
-    message = "No message sent";
-    digitalWrite(led, LOW);
+  String message = receiveMessage(); //接收到的内容
+  if(!validMessage(message)) { //验证消息是否有效
+    server.send(400, "text/plain", "Error: Invalid message");
+    return;
   }
+  handleValidMessage(message); //处理有效的消息
   server.send(200, "text/plain", "Hello, POST: " + message);
 }
 
+/**
+ * 接收消息
+ * @return 消息内容
+ */
+String receiveMessage() {
+  return server.arg("message");
+}
+
+bool validMessage(String message) { // 定义一个函数，函数名为validMessage,参数为String类型的message
+  if(message == "on" || message == "off") { // 如果message 等于on 或者 off 返回true
+    return true;
+  } else { // 否则返回false
+    return false;
+  }
+}
+
+void handleValidMessage(String message) {
+  // 如果接收到了“on”消息，则打开LED灯
+  if(message == "on") {
+    digitalWrite(led, HIGH);
+  } else if(message == "off") {
+    digitalWrite(led, LOW);
+  }
+}
+
+// 接收消息
+String receiveMessage() {
+  if (server.hasArg("plain")) {
+    return server.arg("plain");
+  } else {
+    return "";
+  }
+}
+
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  pinMode(led, OUTPUT);
-  WiFi.begin(ssid, password);
+  Serial.begin(115200); // 初始化串口
+  pinMode(led, OUTPUT); // 设置led引脚为输出
+  WiFi.begin(ssid, password);// 连接到WiFi
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.println("Connecting to WiFi..");
   }
   Serial.println(WiFi.localIP().toString());
 
-  server.on("/", handleRoot);
+  server.on("/",HTTP_GET, handleRoot);
   server.on("/led",HTTP_POST, postHandler);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // 服务器处理客户端请求
   server.handleClient();
-  
+
 }
